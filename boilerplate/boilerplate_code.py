@@ -76,3 +76,11 @@ for link in links:
                 print("tbody를 찾을 수 없습니다.")
         else:
             print("URL을 추출할 수 없습니다.")
+
+# 데이터프레임으로 변환 후 엑셀로 저장
+if data:
+    df = pd.DataFrame(data, columns=['결제일', '년', '월', '일', '법인명', '문서번호', '제목', '신청자', '합의 담당자', '링크'])
+    df.to_excel(r'C:\Users\PHJ\output\output.xlsx', index=False)
+    print("엑셀 파일 저장 완료")
+else:
+    print("추출된 데이터가 없습니다.")
