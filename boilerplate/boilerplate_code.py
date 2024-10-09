@@ -48,7 +48,8 @@ for link in links:
             if tbody:
                 try:
                     # 결제일 추출
-                    payment_date = tbody.select_one('tr.date td.td_point').text.strip()
+                    payment_date_full = tbody.select_one('td.td_point').text.strip()
+                    payment_date = payment_date_full.split(' ')[0]  # "2024-09-05" 추출
                     year, month, day = payment_date.split('-')
                     
                     # 법인명 추출
@@ -58,10 +59,10 @@ for link in links:
                     document_number = tbody.select_one('tr.docoption td').text.strip()
                     
                     # 제목 추출
-                    title = tbody.select_one('td.approval_text span#titleLabel').find_next_sibling(text=True).strip()
+                    title = tbody.select_one('td.approval_text').text.split(corporation_name)[-1].strip()
                     
                     # 신청자 추출
-                    applicant = tbody.select_one('th[scope="row"]:contains("성명") + td span#name').text.strip()
+                    applicant = tbody.select_one('span#name').text.strip()
                     
                     # 합의 담당자 추출
                     approver = tbody.select_one('tr.name td.td_point').text.strip()
