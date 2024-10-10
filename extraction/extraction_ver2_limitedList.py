@@ -76,7 +76,7 @@ try:
         print(e)
         driver.quit()
         sys.exit()
-        
+
     # 검색 결과 로딩 대기
     time.sleep(5)  # 필요에 따라 조정
 
@@ -88,3 +88,47 @@ try:
 
     # 크롤링할 게시글 수 계산
     num_posts_to_crawl = min(len(posts), max_posts)
+
+    for i in range(num_posts_to_crawl):
+        # 게시글 목록을 다시 가져옵니다 (페이지가 동적으로 변할 수 있으므로)
+        posts = driver.find_elements(By.CSS_SELECTOR, 'tr[class*="dhx_skyblue"]')
+        if i >= len(posts):
+            print(f"게시글 수가 예상보다 적습니다. 현재 인덱스: {i}, 게시글 수: {len(posts)}")
+            break
+        post = posts[i]
+
+        try:
+            # 해당 행의 모든 td 요소를 가져옵니다.
+            tds = post.find_elements(By.TAG_NAME, 'td')
+
+            # 결재일 추출
+            결재일_td = tds[5]  # 결재일이 6번째 컬럼에 위치
+            결재일_text = 결재일_td.text.strip()
+
+            # 년, 월, 일 추출
+            년, 월, 일 = 결재일_text.split('-')
+            월 = str(int(월))  # 0을 제거
+            일 = str(int(일))  # 0을 제거
+
+            # 신청자 추출
+            신청자_td = tds[4]  # 신청자가 5번째 컬럼에 위치
+            신청자_span = 신청자_td.find_element(By.TAG_NAME, 'span')
+            신청자 = 신청자_span.text.strip()
+
+            print(f"게시글 {i+1}/{num_posts_to_crawl} - 결재일: {결재일_text}, 신청자: {신청자}")
+
+        except Exception as e:
+            print(f"목록에서 데이터 추출 중 오류 발생 (게시글 {i+1}): {e}")
+            traceback.print_exc()
+            continue  # 오류 발생 시 다음 게시글로 이동
+
+        # 요소가 화면에 보이도록 스크롤합니다.
+        driver.execute_script("arguments[0].scrollIntoView();", post)
+
+        # 클릭 가능할 때까지 대기합니다.
+        try:
+            WebDriverWait(driver, 10).until(EC.element_to_be_clickable(post))
+        except Exception as e:
+            print(f"게시글을 클릭할 수 없습니다 (게시글 {i+1}): {e}")
+            traceback.print_exc()
+            continue
