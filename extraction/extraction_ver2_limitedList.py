@@ -47,7 +47,7 @@ try:
         print("로그인에 실패하였습니다.")
         driver.quit()
         sys.exit()
-        
+
     # 결재 > 부서함 페이지로 이동
     driver.get('https://gw.com2us.com/emate_appro/appro_complete_2024_link.nsf/wfmViaView?readform&viewname=view055&vctype=a')
     print(f"페이지 이동 후 현재 URL: {driver.current_url}")
@@ -76,3 +76,15 @@ try:
         print(e)
         driver.quit()
         sys.exit()
+        
+    # 검색 결과 로딩 대기
+    time.sleep(5)  # 필요에 따라 조정
+
+    # 게시글 목록 가져오기
+    posts = driver.find_elements(By.XPATH, '//tr[contains(@class, "dhx_skyblue")]')
+    print(f"게시글 수: {len(posts)}")
+
+    data_list = []
+
+    # 크롤링할 게시글 수 계산
+    num_posts_to_crawl = min(len(posts), max_posts)
