@@ -47,3 +47,32 @@ try:
         print("로그인에 실패하였습니다.")
         driver.quit()
         sys.exit()
+        
+    # 결재 > 부서함 페이지로 이동
+    driver.get('https://gw.com2us.com/emate_appro/appro_complete_2024_link.nsf/wfmViaView?readform&viewname=view055&vctype=a')
+    print(f"페이지 이동 후 현재 URL: {driver.current_url}")
+
+    # 페이지 로딩 대기: 검색창 요소가 로드될 때까지 대기
+    try:
+        WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.ID, 'searchtext')))
+    except Exception as e:
+        print("검색창을 찾을 수 없습니다.")
+        print(e)
+        driver.quit()
+        sys.exit()
+
+    # 검색창에 '추출' 입력
+    search_input = driver.find_element(By.ID, 'searchtext')
+    search_input.clear()
+    search_input.send_keys('추출')
+
+    # 검색 버튼 클릭
+    try:
+        # 검색 버튼 이미지의 src 속성이 'btn_search_board.gif'인 img 태그 찾기
+        search_button = driver.find_element(By.XPATH, '//img[@class="inbtn" and contains(@src, "btn_search_board.gif")]')
+        search_button.click()
+    except Exception as e:
+        print("검색 버튼을 찾을 수 없습니다.")
+        print(e)
+        driver.quit()
+        sys.exit()
