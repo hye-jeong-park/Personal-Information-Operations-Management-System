@@ -132,3 +132,117 @@ try:
             print(f"게시글을 클릭할 수 없습니다 (게시글 {i+1}): {e}")
             traceback.print_exc()
             continue
+
+        # 게시글 클릭하여 상세 페이지 열기
+        try:
+            post.click()
+        except Exception as e:
+            print(f"게시글 클릭 중 오류 발생 (게시글 {i+1}): {e}")
+            traceback.print_exc()
+            continue
+
+        # 새로운 창으로 전환
+        try:
+            WebDriverWait(driver, 10).until(EC.number_of_windows_to_be(2))
+            driver.switch_to.window(driver.window_handles[-1])
+        except Exception as e:
+            print(f"새 창으로 전환 중 오류 발생 (게시글 {i+1}): {e}")
+            traceback.print_exc()
+            driver.close()
+            driver.switch_to.window(driver.window_handles[0])
+            continue
+
+        # 상세 페이지 로딩 대기_서류명이 '개인정보 추출 신청서'인지 확인하기 위함
+        try:
+            WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, 'AppLineArea')))
+        except Exception as e:
+            print(f"상세 페이지 로딩 중 오류 발생 (게시글 {i+1}): {e}")
+            traceback.print_exc()
+            driver.close()
+            driver.switch_to.window(driver.window_handles[0])
+            continue
+
+        try:
+            # 상세 페이지에서 제목 확인_서류명이 '개인정보 추출 신청서'인지
+            h2_element = driver.find_element(By.CSS_SELECTOR, '#AppLineArea h2')
+            h2_text = h2_element.text.strip()
+
+            # 제목이 '개인정보 추출 신청서'가 아닌 경우 건너뜀
+            if h2_text != '개인정보 추출 신청서':
+                print(f"게시글 {i+1} - 제목이 '개인정보 추출 신청서'가 아닙니다: {h2_text}")
+                driver.close()
+                driver.switch_to.window(driver.window_handles[0])
+                continue  # 다음 게시글로 이동
+
+            # 현재 창 제목 출력
+            print(f"게시글 {i+1} - 현재 창 제목: {driver.title}")
+
+            # 법인명 추출
+            법인명_element = driver.find_elements(By.ID, 'titleLabel')
+            if 법인명_element:
+                법인명 = 법인명_element[0].text.strip()
+            else:
+                print(f"게시글 {i+1} - 법인명 요소를 찾을 수 없습니다.")
+                법인명 = ''
+
+            # 문서번호 추출
+            문서번호_element = driver.find_elements(By.XPATH, '//th[contains(text(),"문서번호")]/following-sibling::td[1]')
+            if 문서번호_element:
+                문서번호 = 문서번호_element[0].text.strip()
+            else:
+                print(f"게시글 {i+1} - 문서번호 요소를 찾을 수 없습니다.")
+                문서번호 = ''
+
+            # 제목 추출
+            제목_element = driver.find_elements(By.CSS_SELECTOR, 'td.approval_text')
+            if 제목_element:
+                제목_text = 제목_element[0].text.strip()
+                제목 = 제목_text.replace(법인명, '').strip()
+            else:
+                print(f"게시글 {i+1} - 제목 요소를 찾을 수 없습니다.")
+                제목 = ''
+
+            # 합의 담당자 추출
+            합의담당자_element = driver.find_elements(By.XPATH, '//th[text()="합의선"]/following::tr[@class="name"][1]/td[@class="td_point"]')
+            if 합의담당자_element:
+                합의담당자 = 합의담당자_element[0].text.strip()
+            else:
+                print(f"게시글 {i+1} - 합의 담당자 요소를 찾을 수 없습니다.")
+                합의담당자 = ''
+
+            # 링크 추출
+            링크 = driver.current_url
+
+            # 데이터 저장
+            data = {
+                '결재일': 결재일_text,
+                '년': 년,
+                '월': 월,
+                '일': 일,
+                '주차': '',          # 빈 문자열 할당
+                '법인명': 법인명,
+                '문서번호': 문서번호,
+                '제목': 제목,
+                '업무 유형': '',      # 빈 문자열 할당
+                '추출 위치': '',      # 빈 문자열 할당
+                '담당 부서': '',      # 빈 문자열 할당
+                '신청자': 신청자,
+                '합의 담당자': 합의담당자,
+                '링크': 링크,
+                '진행 구분': ''       # 빈 문자열 할당
+            }
+            data_list.append(data)
+
+            print(f"게시글 {i+1} - 데이터 추출 완료: {data}")
+
+        except Exception as e:
+            print(f"게시글 {i+1} - 데이터 추출 중 오류 발생: {e}")
+            traceback.print_exc()
+
+        finally:
+            # 창 닫기 및 원래 창으로 전환
+            driver.close()
+            driver.switch_to.window(driver.window_handles[0])
+
+            # 잠시 대기
+            time.sleep(2)
