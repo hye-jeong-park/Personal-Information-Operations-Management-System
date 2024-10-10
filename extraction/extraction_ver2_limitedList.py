@@ -330,3 +330,12 @@ try:
             traceback.print_exc()
     else:
         print("추출된 데이터가 없습니다.")
+
+except Exception as e:
+    print("스크립트 실행 중 예상치 못한 오류가 발생했습니다.")
+    print(e)
+    traceback.print_exc()
+finally:
+    # 브라우저 종료
+    driver.quit()
+    print("브라우저가 종료되었습니다.")
