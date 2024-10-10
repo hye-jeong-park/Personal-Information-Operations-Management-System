@@ -246,3 +246,87 @@ try:
 
             # 잠시 대기
             time.sleep(2)
+
+    # 데이터프레임 생성
+    df = pd.DataFrame(data_list)
+    print(f"총 추출된 게시글 수: {len(df)}")
+
+    ######################################엑셀화##############################################
+
+    if not df.empty:
+        try:
+            # 기존 엑셀 파일 불러오기
+            wb = load_workbook(excel_file)
+            if worksheet_name not in wb.sheetnames:
+                print(f"워크시트 '{worksheet_name}'이(가) 존재하지 않습니다.")
+                driver.quit()
+                sys.exit()
+            ws = wb[worksheet_name]
+
+            # 'NO' 열에서 데이터가 있는 마지막 행 찾기
+            last_row = ws.max_row
+            while last_row >= 6:  # 데이터가 시작되는 행 번호는 6
+                if ws.cell(row=last_row, column=2).value is not None:
+                    break
+                last_row -= 1
+
+            # 새로운 데이터 입력 시작 행
+            if last_row < 6:
+                start_row = 6  # 데이터 시작 행
+            else:
+                start_row = last_row + 1
+
+            # 다음 'NO' 값 결정
+            if last_row >= 6:
+                last_no = ws.cell(row=last_row, column=2).value
+                if isinstance(last_no, int):
+                    next_no = last_no + 1
+                else:
+                    next_no = 1
+            else:
+                next_no = 1
+
+            # 데이터프레임의 열 순서 조정 (엑셀의 열 순서와 일치하도록)
+            df = df[['결재일', '년', '월', '일', '주차', '법인명', '문서번호', '제목', '업무 유형', '추출 위치', '담당 부서', '신청자', '합의 담당자', '링크', '진행 구분']]
+
+            # 열 매핑 설정 (데이터프레임 열 이름과 엑셀 열 인덱스 매핑)
+            column_mapping = {
+                '결재일': 3,     # C
+                '년': 4,         # D
+                '월': 5,         # E
+                '일': 6,         # F
+                '주차': 7,       # G
+                '법인명': 8,     # H
+                '문서번호': 9,   # I
+                '제목': 10,      # J
+                '업무 유형': 11, # K
+                '추출 위치': 12, # L
+                '담당 부서': 13, # M
+                '신청자': 14,    # N
+                '합의 담당자': 15, # O
+                '링크': 16,      # P
+                '진행 구분': 17   # Q
+            }
+
+            # 데이터프레임을 엑셀 워크시트에 쓰기
+            for idx, row in df.iterrows():
+                # 'NO' 값 입력 (열 인덱스 2는 B열)
+                ws.cell(row=start_row, column=2, value=next_no)
+                next_no += 1
+
+                # 각 열에 데이터 입력
+                for col_name, col_idx in column_mapping.items():
+                    value = row[col_name]
+                    ws.cell(row=start_row, column=col_idx, value=value)
+                start_row += 1
+
+            # 엑셀 파일 저장
+            wb.save(excel_file)
+            print(f"데이터가 성공적으로 '{excel_file}' 파일에 저장되었습니다.")
+
+        except Exception as e:
+            print("엑셀 파일 처리 중 오류가 발생했습니다.")
+            print(e)
+            traceback.print_exc()
+    else:
+        print("추출된 데이터가 없습니다.")
