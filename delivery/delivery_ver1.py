@@ -60,3 +60,149 @@ try:
     # 게시글 목록 가져오기
     posts = driver.find_elements(By.XPATH, '//tr[contains(@class, "dhx_skyblue")]')
     print(f"게시글 수: {len(posts)}")
+    
+    data_list = []
+    
+    for i in range(len(posts)):
+        # 게시글 목록을 다시 가져옵니다. (동적 페이지일 경우 필요)
+        posts = driver.find_elements(By.CSS_SELECTOR, 'tr[class*="dhx_skyblue"]')
+        post = posts[i]
+    
+        try:
+            # 해당 행의 모든 td 요소를 가져옵니다.
+            tds = post.find_elements(By.TAG_NAME, 'td')
+    
+            # 등록일 추출 (5번째 td)
+            등록일_td = tds[4]  # 0-based index
+            등록일_text = 등록일_td.get_attribute('title').strip() if 등록일_td.get_attribute('title') else 등록일_td.text.strip()
+    
+            # 작성자 추출 (3번째 td)
+            작성자_td = tds[2]
+            작성자 = 작성자_td.find_element(By.TAG_NAME, 'span').text.strip()
+    
+        except Exception as e:
+            print(f"목록에서 데이터 추출 중 오류 발생: {e}")
+            등록일_text = 작성자 = ''
+            continue  # 오류 발생 시 다음 게시글로 이동
+    
+        # 요소가 화면에 보이도록 스크롤합니다.
+        driver.execute_script("arguments[0].scrollIntoView();", post)
+    
+        # 클릭 가능할 때까지 대기합니다.
+        WebDriverWait(driver, 10).until(EC.element_to_be_clickable(post))
+    
+        # 게시글 클릭하여 팝업 열기
+        post.click()
+    
+        # 새로운 창으로 전환
+        WebDriverWait(driver, 10).until(EC.number_of_windows_to_be(2))
+        driver.switch_to.window(driver.window_handles[-1])
+    
+        # 페이지 로딩 대기
+        WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, 'AppLineArea')))
+    
+        try:
+            # 상세 페이지에서 제목 확인
+            h2_element = driver.find_element(By.CSS_SELECTOR, '#AppLineArea h2')
+            h2_text = h2_element.text.strip()
+    
+            # 제목이 '개인정보 추출 신청서'가 아닌 경우 건너뜀
+            if '개인정보 추출 신청서' not in h2_text:
+                driver.close()
+                driver.switch_to.window(driver.window_handles[0])
+                continue  # 다음 게시글로 이동
+    
+            # 현재 창 제목 출력
+            print(f"현재 창 제목: {driver.title}")
+    
+            # 상세 페이지의 테이블 행들 가져오기
+            table_rows = driver.find_elements(By.XPATH, '//tbody/tr')
+    
+            # 초기화
+            법인명 = 제목 = 파일형식 = 파일용량 = 개인정보_수 = 진행_구분 = ''
+            링크 = driver.current_url
+    
+            for row in table_rows:
+                try:
+                    header = row.find_element(By.XPATH, './td[1]').text.strip()
+                    value_td = row.find_element(By.XPATH, './td[2]')
+                    
+                    if '수신자 (부서, 이름)' in header:
+                        # 법인명 추출: "컴투스 운영지원, 홍길동" 중 "컴투스"만 추출
+                        full_text = value_td.text.strip()
+                        법인명 = full_text.split()[0].split(',')[0] if ',' in full_text else full_text.split()[0]
+                    
+                    elif '제목' in header:
+                        # 제목 추출
+                        제목 = row.find_element(By.ID, 'DisSubject').text.strip()
+                    
+                    elif '파밀명 및 용량 (KB)' in header:
+                        # 파일형식 및 파일 용량 추출
+                        file_info = value_td.text.strip()
+                        # 예시: "(Confidential)_20241017_103738_smon_lms_target_list.zip (221KB)"
+                        file_match = re.match(r'\(.*?\)_(.*?)\.(zip|xlsx).*?\((\d+KB)\)', file_info)
+                        if file_match:
+                            filename = file_match.group(1) + '.' + file_match.group(2)
+                            파일용량 = file_match.group(3)
+                            if filename.endswith('.zip'):
+                                파일형식 = 'Zip'
+                            elif filename.endswith('.xlsx'):
+                                파일형식 = 'Excel'
+                            else:
+                                파일형식 = ''
+                        else:
+                            # 다른 형식의 파일명이 있을 경우
+                            p_tags = value_td.find_elements(By.TAG_NAME, 'p')
+                            if len(p_tags) >= 2:
+                                filename = p_tags[0].text.strip()
+                                파일용량 = p_tags[1].text.strip()
+                                if filename.endswith('.zip'):
+                                    파일형식 = 'Zip'
+                                elif filename.endswith('.xlsx'):
+                                    파일형식 = 'Excel'
+                                else:
+                                    파일형식 = ''
+                            else:
+                                파일형식 = ''
+                                파일용량 = ''
+                    
+                    elif '추출된 항목 및 건수' in header:
+                        # 개인정보(수) 추출: "한국 휴대전화번호 : 10,773건"에서 "10,773" 추출
+                        items = value_td.text.strip()
+                        개인정보_수_match = re.search(r'(\d{1,3}(?:,\d{3})*)건', items)
+                        개인정보_수 = 개인정보_수_match.group(1) if 개인정보_수_match else ''
+                    
+                except Exception as e:
+                    print(f"상세 페이지에서 특정 데이터 추출 중 오류 발생: {e}")
+                    continue
+    
+            # 진행 구분 설정: '제목'에 '추출완료일' 포함 시 "다운 완료"
+            if '추출완료일' in 제목:
+                진행_구분 = '다운 완료'
+            else:
+                진행_구분 = ''
+    
+            # 데이터 저장
+            data = {
+                '등록일': 등록일_text,
+                '법인명': 법인명,
+                '제목': 제목,
+                '작성자': 작성자,
+                '링크': 링크,
+                '파일형식': 파일형식,
+                '파일 용량': 파일용량,
+                '고유식별정보(수)': '',  # 공백으로 저장
+                '개인정보(수)': 개인정보_수,
+                '진행 구분': 진행_구분
+            }
+            data_list.append(data)
+        except Exception as e:
+            print(f"데이터 추출 중 오류 발생: {e}")
+            traceback.print_exc()
+    
+        # 창 닫기 및 원래 창으로 전환
+        driver.close()
+        driver.switch_to.window(driver.window_handles[0])
+    
+        # 잠시 대기
+        time.sleep(2)
