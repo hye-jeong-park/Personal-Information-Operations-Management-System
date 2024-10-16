@@ -261,3 +261,10 @@ try:
         wb.save(excel_file)
     else:
         print("추출된 데이터가 없습니다.")
+
+except Exception as main_e:
+    print(f"전체 프로세스 중 오류 발생: {main_e}")
+    traceback.print_exc()
+finally:
+    # 브라우저 종료
+    driver.quit()
