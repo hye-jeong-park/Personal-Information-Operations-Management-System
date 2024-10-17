@@ -282,6 +282,20 @@ def main():
                 '진행 구분': 28        # AB
             }
         
+            # 데이터프레임을 엑셀 워크시트에 쓰기
+            for idx, row in df.iterrows():
+                # 각 열에 데이터 입력
+                for col_name, col_idx in column_mapping.items():
+                    value = row[col_name]
+                    ws.cell(row=start_row, column=col_idx, value=value)
+                start_row += 1
+        
+            # 엑셀 파일 저장
+            wb.save(excel_file)
+            print(f"엑셀 파일이 성공적으로 저장되었습니다: {excel_file}")
+        else:
+            print("추출된 데이터가 없습니다.")
+        
 
 if __name__ == "__main__":
     main()
