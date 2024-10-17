@@ -97,6 +97,20 @@ def main():
             print(e)
             driver.quit()
             sys.exit()
+        
+        # 게시글 목록 가져오기
+        posts = driver.find_elements(By.XPATH, '//tr[contains(@class, "dhx_skyblue")]')
+        total_posts = len(posts)
+        print(f"총 게시글 수: {total_posts}")
+        
+        if total_posts <= 1:
+            print("처리할 게시글이 없습니다. (첫 번째 게시글만 존재)")
+            driver.quit()
+            sys.exit()
+        
+        # 크롤링할 게시글 개수 설정 (첫 번째 게시글 제외)
+        limit = min(CRAWL_LIMIT, total_posts - 1)
+        print(f"크롤링할 게시글 개수: {limit}")
 
 if __name__ == "__main__":
     main()
