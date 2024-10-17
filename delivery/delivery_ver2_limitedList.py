@@ -49,3 +49,10 @@ def extract_file_info(file_info):
                 file_type = ''
             return file_type, file_size
     return '', ''
+
+def main():
+    # 웹드라이버 설정
+    driver = webdriver.Chrome()
+
+if __name__ == "__main__":
+    main()
