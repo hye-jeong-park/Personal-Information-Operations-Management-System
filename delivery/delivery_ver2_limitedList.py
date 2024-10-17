@@ -144,7 +144,7 @@ def main():
         
             # 클릭 가능할 때까지 대기합니다.
             WebDriverWait(driver, 10).until(EC.element_to_be_clickable(post))
-            
+
             # 게시글 클릭하여 팝업 열기
             post.click()
         
@@ -169,6 +169,50 @@ def main():
         
                 # 현재 창 제목 출력
                 print(f"게시글 {i+1}: 현재 창 제목: {driver.title}")
+        
+                # 상세 페이지의 테이블 행들 가져오기
+                table_rows = driver.find_elements(By.XPATH, '//tbody/tr')
+        
+                # 초기화
+                법인명 = 제목 = 파일형식 = 파일용량 = 개인정보_수 = 진행_구분 = ''
+                링크 = driver.current_url
+        
+                for row in table_rows:
+                    try:
+                        header = row.find_element(By.XPATH, './td[1]').text.strip()
+                        value_td = row.find_element(By.XPATH, './td[2]')
+                        
+                        if '수신자 (부서, 이름)' in header:
+                            # 법인명 추출
+                            full_text = value_td.text.strip()
+                            법인명 = extract_corporate_name(full_text)
+                        
+                        elif '제목' in header:
+                            # 제목 추출
+                            제목 = row.find_element(By.ID, 'DisSubject').text.strip()
+                        
+                        elif '파밀명 및 용량 (KB)' in header:
+                            # 파일형식 및 파일 용량 추출
+                            file_info = value_td.text.strip()
+                            file_type, file_size = extract_file_info(file_info)
+                            파일형식 = file_type
+                            파일용량 = file_size
+                        
+                        elif '추출된 항목 및 건수' in header:
+                            # 개인정보(수) 추출: "한국 휴대전화번호 : 10,773건"에서 "10,773" 추출
+                            items = value_td.text.strip()
+                            개인정보_수_match = re.search(r'(\d{1,3}(?:,\d{3})*)건', items)
+                            개인정보_수 = 개인정보_수_match.group(1) if 개인정보_수_match else ''
+                        
+                    except Exception as e:
+                        print(f"게시글 {i+1}: 상세 페이지에서 특정 데이터 추출 중 오류 발생: {e}")
+                        continue
+        
+                # 진행 구분 설정: '제목'에 '추출완료일' 포함 시 "다운 완료"
+                if '추출완료일' in 제목:
+                    진행_구분 = '다운 완료'
+                else:
+                    진행_구분 = ''
         
 
 if __name__ == "__main__":
