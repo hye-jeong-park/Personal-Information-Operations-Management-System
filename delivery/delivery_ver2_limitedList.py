@@ -12,3 +12,9 @@ import re
 
 # 크롤링할 게시글 개수 설정 (첫 번째 게시글 제외)
 CRAWL_LIMIT = 10  
+
+def extract_corporate_name(full_text):
+    """법인명 추출: "컴투스 운영지원, 이다빈" 중 "컴투스"만 추출"""
+    if ',' in full_text:
+        return full_text.split(',')[0].split()[0]
+    return full_text.split()[0]
