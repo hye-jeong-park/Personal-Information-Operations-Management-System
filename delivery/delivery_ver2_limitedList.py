@@ -82,6 +82,21 @@ def main():
             print("로그인에 실패하였습니다.")
             driver.quit()
             sys.exit()
+        
+        # 결재 > 부서함 페이지로 이동
+        driver.get('https://gw.com2us.com/emate_app/00001/bbs/b2307140306.nsf/view?readform&viewname=view01')
+        
+        # 페이지 이동 후 현재 URL 출력
+        print(f"페이지 이동 후 현재 URL: {driver.current_url}")
+        
+        # 페이지 로딩 대기
+        try:
+            WebDriverWait(driver, 30).until(EC.presence_of_element_located((By.CLASS_NAME, 'dhx_skyblue')))
+        except Exception as e:
+            print("게시글 목록을 찾을 수 없습니다.")
+            print(e)
+            driver.quit()
+            sys.exit()
 
 if __name__ == "__main__":
     main()
