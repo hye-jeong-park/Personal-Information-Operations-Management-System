@@ -53,6 +53,22 @@ def extract_file_info(file_info):
 def main():
     # 웹드라이버 설정
     driver = webdriver.Chrome()
+    
+    try:
+        # 로그인 페이지로 이동
+        driver.get('https://gw.com2us.com/')
+        
+        # 로그인 처리
+        username_input = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.ID, 'Username'))
+        )
+        password_input = driver.find_element(By.ID, 'Password')
+        
+        username = input('아이디를 입력하세요: ')
+        password = getpass.getpass('비밀번호를 입력하세요: ')
+        
+        username_input.send_keys(username)
+        password_input.send_keys(password)
 
 if __name__ == "__main__":
     main()
