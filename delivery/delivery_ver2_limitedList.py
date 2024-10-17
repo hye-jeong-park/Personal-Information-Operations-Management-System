@@ -144,6 +144,31 @@ def main():
         
             # 클릭 가능할 때까지 대기합니다.
             WebDriverWait(driver, 10).until(EC.element_to_be_clickable(post))
+            
+            # 게시글 클릭하여 팝업 열기
+            post.click()
+        
+            # 새로운 창으로 전환
+            WebDriverWait(driver, 10).until(EC.number_of_windows_to_be(2))
+            driver.switch_to.window(driver.window_handles[-1])
+        
+            # 페이지 로딩 대기
+            WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.ID, 'AppLineArea')))
+        
+            try:
+                # 상세 페이지에서 제목 확인
+                h2_element = driver.find_element(By.CSS_SELECTOR, '#AppLineArea h2')
+                h2_text = h2_element.text.strip()
+        
+                # 제목이 '개인정보 추출 신청서'가 아닌 경우 건너뜀
+                if '개인정보 추출 신청서' not in h2_text:
+                    print(f"게시글 {i+1}: 제목이 '개인정보 추출 신청서'가 아닙니다. 건너뜁니다.")
+                    driver.close()
+                    driver.switch_to.window(driver.window_handles[0])
+                    continue  # 다음 게시글로 이동
+        
+                # 현재 창 제목 출력
+                print(f"게시글 {i+1}: 현재 창 제목: {driver.title}")
         
 
 if __name__ == "__main__":
