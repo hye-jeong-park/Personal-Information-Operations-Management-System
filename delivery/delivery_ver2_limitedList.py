@@ -69,6 +69,19 @@ def main():
         
         username_input.send_keys(username)
         password_input.send_keys(password)
+        
+        login_button = driver.find_element(By.CLASS_NAME, 'btnLogin')
+        login_button.click()
+        
+        # 로그인 성공 여부 확인
+        time.sleep(5)
+        current_url = driver.current_url
+        print(f"로그인 후 현재 URL: {current_url}")
+        
+        if 'login' in current_url.lower():
+            print("로그인에 실패하였습니다.")
+            driver.quit()
+            sys.exit()
 
 if __name__ == "__main__":
     main()
