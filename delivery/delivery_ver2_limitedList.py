@@ -111,6 +111,40 @@ def main():
         # 크롤링할 게시글 개수 설정 (첫 번째 게시글 제외)
         limit = min(CRAWL_LIMIT, total_posts - 1)
         print(f"크롤링할 게시글 개수: {limit}")
+                
+        data_list = []
+        
+        for i in range(1, limit + 1):  # 첫 번째 게시글은 인덱스 0이므로 1부터 시작
+            # 게시글 목록을 다시 가져옵니다. (동적 페이지일 경우 필요)
+            posts = driver.find_elements(By.CSS_SELECTOR, 'tr[class*="dhx_skyblue"]')
+            if i >= len(posts):
+                print(f"게시글 {i+1}은 존재하지 않습니다. 종료합니다.")
+                break
+            post = posts[i]
+        
+            try:
+                # 해당 행의 모든 td 요소를 가져옵니다.
+                tds = post.find_elements(By.TAG_NAME, 'td')
+        
+                # 등록일 추출 (5번째 td, 0-based index)
+                등록일_td = tds[4]
+                등록일_text = 등록일_td.get_attribute('title').strip() if 등록일_td.get_attribute('title') else 등록일_td.text.strip()
+        
+                # 작성자 추출 (3번째 td)
+                작성자_td = tds[2]
+                작성자 = 작성자_td.find_element(By.TAG_NAME, 'span').text.strip()
+        
+            except Exception as e:
+                print(f"목록에서 데이터 추출 중 오류 발생 (게시글 {i+1}): {e}")
+                등록일_text = 작성자 = ''
+                continue  # 오류 발생 시 다음 게시글로 이동
+        
+            # 요소가 화면에 보이도록 스크롤합니다.
+            driver.execute_script("arguments[0].scrollIntoView();", post)
+        
+            # 클릭 가능할 때까지 대기합니다.
+            WebDriverWait(driver, 10).until(EC.element_to_be_clickable(post))
+        
 
 if __name__ == "__main__":
     main()
