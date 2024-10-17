@@ -214,6 +214,35 @@ def main():
                 else:
                     진행_구분 = ''
         
+                # 데이터 저장
+                data = {
+                    '등록일': 등록일_text,
+                    '법인명': 법인명,
+                    '제목': 제목,
+                    '작성자': 작성자,
+                    '링크': 링크,
+                    '파일형식': 파일형식,
+                    '파일 용량': 파일용량,
+                    '고유식별정보(수)': '',  # 공백으로 저장
+                    '개인정보(수)': 개인정보_수,
+                    '진행 구분': 진행_구분
+                }
+                data_list.append(data)
+                print(f"게시글 {i+1}: 데이터 추출 완료")
+            except Exception as e:
+                print(f"게시글 {i+1}: 데이터 추출 중 오류 발생: {e}")
+                traceback.print_exc()
+        
+            # 창 닫기 및 원래 창으로 전환
+            driver.close()
+            driver.switch_to.window(driver.window_handles[0])
+        
+            # 잠시 대기
+            time.sleep(2)
+        
+        # 데이터프레임 생성
+        df = pd.DataFrame(data_list)
+        
 
 if __name__ == "__main__":
     main()
