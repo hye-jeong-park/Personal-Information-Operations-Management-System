@@ -80,3 +80,12 @@ def find_section_text(driver, section_title):
         except:
             continue
     return None
+
+def main():
+    # 웹드라이버 설정
+    options = webdriver.ChromeOptions()
+    options.add_argument("--start-maximized")
+    driver = webdriver.Chrome(options=options)
+
+if __name__ == "__main__":
+    main()
