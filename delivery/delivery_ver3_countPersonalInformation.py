@@ -60,3 +60,23 @@ def extract_file_info(file_info):
         file_size = ''
 
     return file_type, file_size
+
+def find_section_text(driver, section_title):
+    """
+    특정 섹션의 제목을 기반으로 해당 섹션의 내용을 추출하는 함수
+    """
+    # 모든 <tr> 요소를 반복하면서 섹션 찾기
+    tr_elements = driver.find_elements(By.XPATH, '//table//tr')
+    for tr in tr_elements:
+        tds = tr.find_elements(By.TAG_NAME, 'td')
+        if len(tds) < 2:
+            continue
+        try:
+            # 첫 번째 <td>의 첫 번째 <span> 텍스트 확인
+            header_span = tds[0].find_element(By.TAG_NAME, 'span')
+            header_text = header_span.text.strip()
+            if section_title == header_text:
+                return tds[1].text.strip()
+        except:
+            continue
+    return None
