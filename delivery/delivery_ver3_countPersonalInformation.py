@@ -16,3 +16,11 @@ CRAWL_LIMIT = 10
 # 엑셀 파일 경로 및 워크시트 이름 설정
 excel_file = r'C:\Users\PHJ\output\개인정보 운영대장.xlsx'
 worksheet_name = '개인정보 추출 및 이용 관리'
+
+def extract_corporate_name(full_text):
+    """
+    법인명 추출: "컴투스 운영지원, 홍길동" 중 "컴투스"만 추출
+    """
+    if ',' in full_text:
+        return full_text.split(',')[0].split()[0]
+    return full_text.split()[0]
