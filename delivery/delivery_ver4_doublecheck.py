@@ -63,3 +63,32 @@ def extract_file_info(file_info):
         file_size = size_part
 
     return file_type, file_size
+
+def find_section_text(driver, section_titles):
+    """
+    특정 섹션의 제목을 기반으로 해당 섹션의 내용을 추출하는 함수
+    section_titles: 섹션 제목의 리스트
+    """
+    try:
+        # 모든 <tr> 요소를 반복하면서 섹션 찾기
+        tr_elements = driver.find_elements(By.XPATH, '//table//tr')
+        for tr in tr_elements:
+            try:
+                # 각 <tr>에서 첫 번째 <td> 요소의 텍스트 추출
+                td_elements = tr.find_elements(By.TAG_NAME, 'td')
+                if len(td_elements) >=2:
+                    th_td = td_elements[0]
+                    spans = th_td.find_elements(By.TAG_NAME, 'span')
+                    header_text = ''.join([span.text.strip() for span in spans])
+
+                    for section_title in section_titles:
+                        if section_title in header_text:
+                            # 해당 <tr>의 두 번째 <td> 요소의 텍스트 추출
+                            value_td = td_elements[1]
+                            return value_td.text.strip()
+            except Exception as e:
+                continue
+        return None
+    except Exception as e:
+        print(f"find_section_text 오류: {e}")
+        return None
