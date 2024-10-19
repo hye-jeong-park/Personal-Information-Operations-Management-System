@@ -395,3 +395,9 @@ def main():
 
                 # iframe에서 나옴
                 driver.switch_to.default_content()
+        
+                # 진행 구분 설정: '제목'에 '추출완료' 포함 시 "다운 완료"
+                if '추출완료' in 제목:
+                    진행_구분 = '다운 완료'
+                else:
+                    진행_구분 = ''
