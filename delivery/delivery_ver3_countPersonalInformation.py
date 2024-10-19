@@ -412,6 +412,10 @@ def main():
         print("스크립트 실행 중 예상치 못한 오류가 발생했습니다.")
         print(e)
         traceback.print_exc()
+    finally:
+        # 브라우저 종료
+        driver.quit()
+        print("브라우저가 종료되었습니다.")        
 
 if __name__ == "__main__":
     main()
