@@ -400,6 +400,18 @@ def main():
                 # 엑셀 파일 저장
                 wb.save(excel_file)
                 print(f"데이터가 성공적으로 '{excel_file}' 파일에 저장되었습니다.")
+                
+            except Exception as e:
+                print("엑셀 파일 처리 중 오류가 발생했습니다.")
+                print(e)
+                traceback.print_exc()
+        else:
+            print("추출된 데이터가 없습니다.")
+    
+    except Exception as e:
+        print("스크립트 실행 중 예상치 못한 오류가 발생했습니다.")
+        print(e)
+        traceback.print_exc()
 
 if __name__ == "__main__":
     main()
