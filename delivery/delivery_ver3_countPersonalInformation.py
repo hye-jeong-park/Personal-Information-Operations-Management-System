@@ -346,6 +346,60 @@ def main():
         
         # 데이터프레임 생성
         df = pd.DataFrame(data_list)
+                
+        ######################################엑셀화##############################################
+        
+        if not df.empty:
+            try:
+                # 기존 엑셀 파일 불러오기
+                wb = load_workbook(excel_file)
+                if worksheet_name not in wb.sheetnames:
+                    print(f"워크시트 '{worksheet_name}'이(가) 존재하지 않습니다.")
+                    driver.quit()
+                    sys.exit()
+                ws = wb[worksheet_name]
+            
+                # 'S' 열(등록일)에서 데이터가 있는 마지막 행 찾기
+                last_row = ws.max_row
+                while last_row >= 5:  # 데이터가 시작되는 행 번호는 5
+                    if ws.cell(row=last_row, column=19).value is not None:  # S열 (등록일) 확인
+                        break
+                    last_row -= 1
+            
+                # 새로운 데이터 입력 시작 행
+                if last_row < 5:
+                    start_row = 5  # 데이터 시작 행
+                else:
+                    start_row = last_row + 1
+            
+                # 데이터프레임의 열 순서 조정 (엑셀의 열 순서와 일치하도록)
+                df = df[['등록일', '법인명', '제목', '작성자', '링크', '파일형식', '파일 용량', '고유식별정보(수)', '개인정보(수)', '진행 구분']]
+            
+                # 열 매핑 설정 (데이터프레임 열 이름과 엑셀 열 인덱스 매핑)
+                column_mapping = {
+                    '등록일': 19,          # S
+                    '법인명': 20,          # T
+                    '제목': 21,            # U
+                    '작성자': 22,          # V
+                    '링크': 23,            # W
+                    '파일형식': 24,        # X
+                    '파일 용량': 25,       # Y
+                    '고유식별정보(수)': 26, # Z
+                    '개인정보(수)': 27,    # AA
+                    '진행 구분': 28        # AB
+                }
+            
+                # 데이터프레임을 엑셀 워크시트에 쓰기
+                for idx, row in df.iterrows():
+                    # 각 열에 데이터 입력
+                    for col_name, col_idx in column_mapping.items():
+                        value = row[col_name]
+                        ws.cell(row=start_row, column=col_idx, value=value)
+                    start_row += 1
+            
+                # 엑셀 파일 저장
+                wb.save(excel_file)
+                print(f"데이터가 성공적으로 '{excel_file}' 파일에 저장되었습니다.")
 
 if __name__ == "__main__":
     main()
