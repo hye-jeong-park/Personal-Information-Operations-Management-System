@@ -144,6 +144,179 @@ def main():
         print(f"크롤링할 게시글 개수: {limit}")
         
         data_list = []
+                
+        for i in range(1, limit + 1):  # 첫 번째 게시글은 인덱스 0이므로 1부터 시작
+            # 게시글 목록을 다시 가져옵니다. (동적 페이지일 경우 필요)
+            posts = driver.find_elements(By.CSS_SELECTOR, 'tr[class*="dhx_skyblue"]')
+            if i >= len(posts):
+                print(f"게시글 {i+1}은 존재하지 않습니다. 종료합니다.")
+                break
+            post = posts[i]
+        
+            try:
+                # 해당 행의 모든 td 요소를 가져옵니다.
+                tds = post.find_elements(By.TAG_NAME, 'td')
+        
+                # 등록일 추출 (5번째 td, 0-based index)
+                if len(tds) >= 5:
+                    등록일_td = tds[4]
+                    등록일_text = 등록일_td.get_attribute('title').strip() if 등록일_td.get_attribute('title') else 등록일_td.text.strip()
+                else:
+                    print(f"게시글 {i+1}: 등록일 정보가 부족합니다.")
+                    등록일_text = ''
+        
+                # 작성자 추출 (3번째 td)
+                if len(tds) >= 3:
+                    작성자_td = tds[2]
+                    # 작성자가 <span> 태그 내에 있는 경우
+                    try:
+                        작성자 = 작성자_td.find_element(By.TAG_NAME, 'span').text.strip()
+                    except:
+                        # <span> 태그가 없는 경우
+                        작성자 = 작성자_td.text.strip()
+                else:
+                    print(f"게시글 {i+1}: 작성자 정보가 부족합니다.")
+                    작성자 = ''
+        
+            except Exception as e:
+                print(f"목록에서 데이터 추출 중 오류 발생 (게시글 {i+1}): {e}")
+                등록일_text = 작성자 = ''
+                continue  # 오류 발생 시 다음 게시글로 이동
+        
+            # 요소가 화면에 보이도록 스크롤합니다.
+            driver.execute_script("arguments[0].scrollIntoView();", post)
+        
+            # 클릭 가능할 때까지 대기합니다.
+            try:
+                WebDriverWait(driver, 20).until(EC.element_to_be_clickable(post))
+            except Exception as e:
+                print(f"게시글을 클릭할 수 없습니다 (게시글 {i+1}): {e}")
+                traceback.print_exc()
+                continue
+    
+            # 게시글 클릭하여 상세 페이지 열기
+            try:
+                post.click()
+            except Exception as e:
+                print(f"게시글 클릭 중 오류 발생 (게시글 {i+1}): {e}")
+                traceback.print_exc()
+                continue
+    
+            # 새로운 창으로 전환
+            try:
+                WebDriverWait(driver, 20).until(EC.number_of_windows_to_be(2))
+                driver.switch_to.window(driver.window_handles[-1])
+            except Exception as e:
+                print(f"새 창으로 전환 중 오류 발생 (게시글 {i+1}): {e}")
+                traceback.print_exc()
+                driver.close()
+                driver.switch_to.window(driver.window_handles[0])
+                continue
+    
+            # 필요한 시간 대기 (페이지 로딩)
+            try:
+                WebDriverWait(driver, 20).until(
+                    EC.presence_of_element_located((By.ID, 'HeaderTable'))
+                )
+                print(f"게시글 {i+1}: 상세 페이지 로딩 완료")
+            except Exception as e:
+                print(f"상세 페이지 로딩 중 오류 발생 (게시글 {i+1}): {e}")
+                traceback.print_exc()
+                driver.close()
+                driver.switch_to.window(driver.window_handles[0])
+                continue
+    
+            try:
+                # 현재 창 제목 출력
+                print(f"게시글 {i+1}: 현재 창 제목: {driver.title}")
+        
+                # 제목 추출
+                try:
+                    제목 = driver.find_element(By.ID, 'DisSubject').text.strip()
+                except:
+                    제목 = ''
+                    print(f"게시글 {i+1}: 제목을 찾을 수 없습니다.")
+        
+                # 작성자 추출
+                try:
+                    작성자_full = driver.find_element(By.ID, 'DismyName').text.strip()
+                except:
+                    작성자_full = ''
+                    print(f"게시글 {i+1}: 작성자 전체 이름을 찾을 수 없습니다.")
+        
+                # 등록일 추출
+                try:
+                    등록일_text = driver.find_element(By.ID, 'DiscDate').text.strip()
+                except:
+                    등록일_text = ''
+                    print(f"게시글 {i+1}: 등록일을 찾을 수 없습니다.")
+        
+                # <iframe>으로 전환
+                try:
+                    iframe = WebDriverWait(driver, 10).until(
+                        EC.presence_of_element_located((By.ID, 'ifa_form'))
+                    )
+                    driver.switch_to.frame(iframe)
+                except Exception as e:
+                    print(f"게시글 {i+1}: <iframe>을 찾거나 전환하는 중 오류 발생: {e}")
+                    traceback.print_exc()
+                    driver.close()
+                    driver.switch_to.window(driver.window_handles[0])
+                    continue
+        
+                # 수신자 (부서, 이름) 추출 및 법인명 추출
+                try:
+                    recipient_text = find_section_text(driver, '수신자 (부서, 이름)')
+                    if recipient_text:
+                        법인명 = extract_corporate_name(recipient_text)
+                    else:
+                        법인명 = ''
+                        print(f"게시글 {i+1}: 수신자 정보를 찾을 수 없습니다.")
+                except Exception as e:
+                    법인명 = ''
+                    print(f"게시글 {i+1}: 수신자 정보 추출 중 오류 발생: {e}")
+                    traceback.print_exc()
+        
+                # 추출된 항목 및 건수 추출
+                try:
+                    item_text = find_section_text(driver, '추출된 항목 및 건수')
+                    if item_text:
+                        # 모든 "건" 앞의 숫자를 추출하여 합산
+                        건수_matches = re.findall(r'(\d{1,3}(?:,\d{3})*)\s*건', item_text)
+                        개인정보_수 = sum(int(match.replace(',', '')) for match in 건수_matches)
+                    else:
+                        개인정보_수 = 0
+                        print(f"게시글 {i+1}: '추출된 항목 및 건수' 섹션을 찾을 수 없습니다.")
+                except Exception as e:
+                    개인정보_수 = 0
+                    print(f"게시글 {i+1}: 개인정보 수 추출 중 오류 발생: {e}")
+                    traceback.print_exc()
+        
+                # 파밀명 및 용량 (KB) 추출 및 파일 정보 파싱
+                파일형식 = ''
+                파일용량 = ''
+                try:
+                    file_text = find_section_text(driver, '파밀명 및 용량 (KB)')
+                    if file_text:
+                        파일형식, 파일용량 = extract_file_info(file_text)
+                    else:
+                        파일형식 = ''
+                        파일용량 = ''
+                        print(f"게시글 {i+1}: '파밀명 및 용량 (KB)' 섹션을 찾을 수 없습니다.")
+                except Exception as e:
+                    파일형식 = ''
+                    파일용량 = ''
+                    print(f"게시글 {i+1}: 파일 정보 추출 중 오류 발생: {e}")
+                    traceback.print_exc()
+        
+                # <iframe>에서 기본 문서로 돌아오기
+                driver.switch_to.default_content()
+        
+                # 진행 구분 설정: '제목'에 '추출완료일' 포함 시 "다운 완료"
+                if '추출완료일' in 제목:
+                    진행_구분 = '다운 완료'
+                else:
+                    진행_구분 = ''
 
 if __name__ == "__main__":
     main()
