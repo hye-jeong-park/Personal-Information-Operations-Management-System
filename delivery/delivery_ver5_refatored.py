@@ -22,7 +22,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 def extract_corporate_name(full_text: str) -> str:
     """
-    법인명 추출: "게임사업3본부 K사업팀 / 김문성B님" 중 "게임사업3본부"만 추출
+    법인명 추출: "게임사업3본부 K사업팀 / 홍길동님" 중 "게임사업3본부"만 추출
     """
     if '/' in full_text:
         return full_text.split('/')[0].strip().split()[0]
