@@ -375,3 +375,108 @@ def extract_post_data(driver: webdriver.Chrome, post: webdriver.remote.webelemen
             logging.error(f"게시글 {index}: 창 닫기 및 전환 중 오류 발생: {e}")
             traceback.print_exc()
         time.sleep(2)
+
+def save_to_excel(data_list: List[Dict]) -> None:
+    """
+    데이터프레임을 엑셀에 저장
+    """
+    if not data_list:
+        logging.info("추출된 데이터가 없습니다.")
+        return
+
+    df = pd.DataFrame(data_list)
+
+    try:
+        wb = load_workbook(EXCEL_FILE)
+        if WORKSHEET_NAME not in wb.sheetnames:
+            logging.error(f"워크시트 '{WORKSHEET_NAME}'이(가) 존재하지 않습니다.")
+            sys.exit()
+
+        ws = wb[WORKSHEET_NAME]
+        last_row = ws.max_row
+        while last_row >= 5 and ws.cell(row=last_row, column=19).value is None:
+            last_row -= 1
+
+        start_row = max(last_row + 1, 5)
+
+        df = df[['등록일', '법인명', '제목', '작성자', '링크', '파일형식', '파일 용량', '고유식별정보(수)', '개인정보(수)', '진행 구분']]
+
+        column_mapping = {
+            '등록일': 19,           # S
+            '법인명': 20,           # T
+            '제목': 21,             # U
+            '작성자': 22,           # V
+            '링크': 23,             # W
+            '파일형식': 24,         # X
+            '파일 용량': 25,        # Y
+            '고유식별정보(수)': 26, # Z
+            '개인정보(수)': 27,     # AA
+            '진행 구분': 28         # AB
+        }
+
+        for _, row in df.iterrows():
+            for col_name, col_idx in column_mapping.items():
+                ws.cell(row=start_row, column=col_idx, value=row[col_name])
+            start_row += 1
+
+        wb.save(EXCEL_FILE)
+        logging.info(f"데이터가 성공적으로 '{EXCEL_FILE}' 파일에 저장되었습니다.")
+
+    except Exception as e:
+        logging.error("엑셀 파일 처리 중 오류가 발생했습니다.")
+        logging.error(e)
+        traceback.print_exc()
+
+
+def main() -> None:
+    driver = initialize_webdriver()
+
+    try:
+        username = input('아이디를 입력하세요: ')
+        password = getpass.getpass('비밀번호를 입력하세요: ')
+
+        if not login(driver, username, password):
+            driver.quit()
+            sys.exit()
+
+        if not navigate_to_target_page(driver):
+            driver.quit()
+            sys.exit()
+
+        posts = fetch_posts(driver)
+        total_posts = len(posts)
+
+        if total_posts <= 1:
+            logging.info("처리할 게시글이 없습니다. (첫 번째 게시글만 존재)")
+            driver.quit()
+            sys.exit()
+
+        limit = min(CRAWL_LIMIT, total_posts - 1)
+        logging.info(f"크롤링할 게시글 개수: {limit}")
+
+        data_list = []
+
+        for i in range(1, limit + 1):
+            posts = driver.find_elements(By.CSS_SELECTOR, 'tr[class*="dhx_skyblue"]')
+            if i >= len(posts):
+                logging.warning(f"게시글 {i}은 존재하지 않습니다. 종료합니다.")
+                break
+            post = posts[i]
+
+            data = extract_post_data(driver, post, i)
+            if data:
+                data_list.append(data)
+
+        save_to_excel(data_list)
+
+    except Exception as e:
+        logging.error("스크립트 실행 중 예상치 못한 오류가 발생했습니다.")
+        logging.error(e)
+        traceback.print_exc()
+    finally:
+        driver.quit()
+        logging.info("브라우저가 종료되었습니다.")
+
+
+if __name__ == "__main__":
+    main()
