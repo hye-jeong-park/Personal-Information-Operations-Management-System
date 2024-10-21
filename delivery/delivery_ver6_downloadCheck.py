@@ -21,7 +21,6 @@ WORKSHEET_NAME = '개인정보 추출 및 이용 관리'
 # 로깅 설정
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-
 def extract_corporate_name(full_text: str) -> str:
     """
     법인명 추출: "게임사업3본부 K사업팀 / 홍길동님" 중 "게임사업3본부"만 추출
@@ -29,7 +28,6 @@ def extract_corporate_name(full_text: str) -> str:
     if '/' in full_text:
         return full_text.split('/')[0].strip().split()[0]
     return full_text.strip().split()[0]
-
 
 def extract_file_info(file_info: str) -> Tuple[str, str]:
     """
@@ -64,7 +62,6 @@ def extract_file_info(file_info: str) -> Tuple[str, str]:
 
     return file_type, file_size
 
-
 def find_section_text(driver: webdriver.Chrome, section_titles: List[str]) -> Optional[str]:
     """
     특정 섹션의 제목을 기반으로 해당 섹션의 내용을 추출하는 함수
@@ -86,7 +83,6 @@ def find_section_text(driver: webdriver.Chrome, section_titles: List[str]) -> Op
     except Exception as e:
         logging.error(f"find_section_text 오류: {e}")
         return None
-
 
 def extract_attachment_info(driver: webdriver.Chrome) -> Tuple[str, str]:
     """
@@ -143,7 +139,6 @@ def extract_attachment_info(driver: webdriver.Chrome) -> Tuple[str, str]:
 
     return 파일형식, 파일용량
 
-
 def initialize_webdriver() -> webdriver.Chrome:
     """
     웹드라이버 초기화
@@ -153,7 +148,6 @@ def initialize_webdriver() -> webdriver.Chrome:
     # options.add_argument("--headless")  # 필요 시 헤드리스 모드 활성화
     driver = webdriver.Chrome(options=options)
     return driver
-
 
 def login(driver: webdriver.Chrome, username: str, password: str) -> bool:
     """
@@ -188,7 +182,6 @@ def login(driver: webdriver.Chrome, username: str, password: str) -> bool:
         traceback.print_exc()
         return False
 
-
 def navigate_to_target_page(driver: webdriver.Chrome) -> bool:
     """
     개인정보 파일 전송 페이지로 이동
@@ -202,7 +195,6 @@ def navigate_to_target_page(driver: webdriver.Chrome) -> bool:
         logging.error(e)
         traceback.print_exc()
         return False
-
 
 def fetch_posts(driver: webdriver.Chrome) -> List[webdriver.remote.webelement.WebElement]:
     """
@@ -220,7 +212,6 @@ def fetch_posts(driver: webdriver.Chrome) -> List[webdriver.remote.webelement.We
         logging.error(e)
         traceback.print_exc()
         return []
-
 
 def extract_post_data(driver: webdriver.Chrome, post: webdriver.remote.webelement.WebElement, index: int) -> Optional[Dict]:
     """
@@ -427,7 +418,6 @@ def save_to_excel(data_list: List[Dict]) -> None:
         logging.error(e)
         traceback.print_exc()
 
-
 def main() -> None:
     driver = initialize_webdriver()
 
@@ -476,7 +466,6 @@ def main() -> None:
     finally:
         driver.quit()
         logging.info("브라우저가 종료되었습니다.")
-
 
 if __name__ == "__main__":
     main()
