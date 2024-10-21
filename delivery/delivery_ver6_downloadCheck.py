@@ -298,3 +298,80 @@ def extract_post_data(driver: webdriver.Chrome, post: webdriver.remote.webelemen
             logging.error(f"게시글 {index}: iframe에서 데이터 추출 중 오류 발생: {e}")
             traceback.print_exc()
             driver.switch_to.default_content()
+
+        # 진행 구분 설정
+        진행_구분 = ''
+        try:
+            # 첨부파일 이력조회 버튼 클릭
+            attm_log_button = driver.find_element(By.XPATH, '//a[span[text()="첨부파일 이력조회"]]')
+            attm_log_button.click()
+            logging.info(f"게시글 {index}: 첨부파일 이력조회 버튼 클릭")
+
+            # # 이력 정보가 로드될 때까지 대기(전 버전의 코드)
+            # WebDriverWait(driver, 50).until(
+            #     EC.visibility_of_element_located((By.ID, 'ResultTable'))
+            # )
+            try:
+                # 이력 테이블이 나타날 때까지 대기
+                WebDriverWait(driver, 20).until(
+                    EC.presence_of_element_located((By.XPATH, '//table[@id="ResultTable"]/tbody/tr'))
+                )
+                logging.info(f"게시글 {index}: 첨부파일 이력 테이블 로딩 완료")
+            except Exception as e:
+                logging.error(f"게시글 {index}: 첨부파일 이력 테이블 로딩 중 오류 발생: {e}")
+                traceback.print_exc()
+                return None
+
+
+            # 이력 테이블에서 데이터 추출
+            rows = driver.find_elements(By.XPATH, '//table[@id="ResultTable"]/tbody/tr')
+            다운로드_이력_존재 = False                                                                          
+            for row in rows:
+                cells = row.find_elements(By.TAG_NAME, 'td')
+                if len(cells) >= 6:
+                    구분 = cells[0].text.strip()
+                    수행자 = cells[1].text.strip()
+                    # 구분이 다운로드이고, 수행자가 수신자에 포함되는지 확인
+                    if 구분 == '다운로드' and 수행자 in 수신자:
+                        다운로드_이력_존재 = True
+                        logging.info(f"게시글 {index}: 다운로드 이력 발견 - 수행자: {수행자}")
+                        break
+
+            if 다운로드_이력_존재:
+                진행_구분 = '다운 완료'
+            else:
+                진행_구분 = ''
+        except Exception as e:
+            logging.error(f"게시글 {index}: 첨부파일 이력조회 처리 중 오류 발생: {e}")
+            traceback.print_exc()
+
+        # 데이터 구성
+        data = {
+            '등록일': 등록일_text or 등록일_text_detail,
+            '법인명': 법인명,
+            '제목': 제목,
+            '작성자': 작성자_full,
+            '링크': driver.current_url,
+            '파일형식': 파일형식,
+            '파일 용량': 파일용량,
+            '고유식별정보(수)': '',
+            '개인정보(수)': 개인정보_수,
+            '진행 구분': 진행_구분
+        }
+
+        logging.info(f"게시글 {index}: 데이터 추출 완료")
+        return data
+
+    except Exception as e:
+        logging.error(f"게시글 {index}: 데이터 추출 중 오류 발생: {e}")
+        traceback.print_exc()
+        return None
+    finally:
+        # 창 닫기 및 원래 창으로 전환
+        try:
+            driver.close()
+            driver.switch_to.window(driver.window_handles[0])
+        except Exception as e:
+            logging.error(f"게시글 {index}: 창 닫기 및 전환 중 오류 발생: {e}")
+            traceback.print_exc()
+        time.sleep(2)
