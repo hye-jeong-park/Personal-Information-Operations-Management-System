@@ -275,3 +275,35 @@ def extract_post_data(driver: webdriver.Chrome, post: webdriver.remote.webelemen
                 logging.info(f"게시글 {index}: 수신자 정보 추출 완료: {법인명}")
             else:
                 logging.warning(f"게시글 {index}: 수신자 정보를 찾을 수 없습니다.")
+
+            item_text = find_section_text(driver, ['추출된 항목 및 건수', 'Items and Counts Extracted'])
+            if item_text:
+                lines = item_text.strip().split('\n')
+                keywords = ["주민등록번호", "여권번호", "운전면허의 면허번호", "외국인등록번호", "신분증"]
+                found_keywords = False
+                for line in lines:
+                    line = line.strip()
+                    # 전체 건수 추출
+                    count_match = re.search(r'(\d{1,3}(?:,\d{3})*)\s*건', line)
+                    if count_match:
+                        count = int(count_match.group(1).replace(',', ''))
+                        개인정보_수 += count
+                    else:
+                        count = 0  # 건수가 없는 경우 0으로 처리
+                    # 키워드 포함 여부 확인
+                    if any(keyword in line for keyword in keywords):
+                        고유식별정보_수 += count
+                        found_keywords = True
+                if not found_keywords:
+                    logging.info(f"게시글 {index}: 고유식별정보 미포함")
+                else:
+                    logging.info(f"게시글 {index}: 고유식별정보 수 추출 완료: {고유식별정보_수}")
+                logging.info(f"게시글 {index}: 개인정보 수 추출 완료: {개인정보_수}")
+            else:
+                logging.warning(f"게시글 {index}: '추출된 항목 및 건수' 섹션을 찾을 수 없습니다.")
+
+            driver.switch_to.default_content()
+        except Exception as e:
+            logging.error(f"게시글 {index}: iframe에서 데이터 추출 중 오류 발생: {e}")
+            traceback.print_exc()
+            driver.switch_to.default_content()
