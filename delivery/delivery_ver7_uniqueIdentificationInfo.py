@@ -212,3 +212,66 @@ def fetch_posts(driver: webdriver.Chrome) -> List[webdriver.remote.webelement.We
         logging.error(e)
         traceback.print_exc()
         return []
+
+def extract_post_data(driver: webdriver.Chrome, post: webdriver.remote.webelement.WebElement, index: int) -> Optional[Dict]:
+    """
+    게시글에서 데이터 추출
+    """
+    try:
+        tds = post.find_elements(By.TAG_NAME, 'td')
+
+        # 등록일
+        if len(tds) >= 5:
+            등록일_text = tds[4].get_attribute('title').strip() if tds[4].get_attribute('title') else tds[4].text.strip()
+        else:
+            logging.warning(f"게시글 {index}: 등록일 정보가 부족합니다.")
+            등록일_text = ''
+
+        # 작성자
+        if len(tds) >= 3:
+            작성자_td = tds[2]
+            작성자 = 작성자_td.find_element(By.TAG_NAME, 'span').text.strip() if 작성자_td.find_elements(By.TAG_NAME, 'span') else 작성자_td.text.strip()
+        else:
+            logging.warning(f"게시글 {index}: 작성자 정보가 부족합니다.")
+            작성자 = ''
+
+        # 스크롤 및 클릭
+        driver.execute_script("arguments[0].scrollIntoView();", post)
+        WebDriverWait(driver, 20).until(EC.element_to_be_clickable(post))
+        post.click()
+
+        # 새 창으로 전환
+        WebDriverWait(driver, 20).until(EC.number_of_windows_to_be(2))
+        driver.switch_to.window(driver.window_handles[-1])
+        logging.info(f"게시글 {index}: 새 창으로 전환")
+
+        # 상세 페이지 로딩
+        WebDriverWait(driver, 20).until(
+            EC.presence_of_element_located((By.ID, 'HeaderTable'))
+        )
+        logging.info(f"게시글 {index}: 상세 페이지 로딩 완료")
+
+        # 제목, 작성자, 등록일 상세
+        제목 = driver.find_element(By.ID, 'DisSubject').text.strip() if driver.find_elements(By.ID, 'DisSubject') else ''
+        작성자_full = driver.find_element(By.ID, 'DismyName').text.strip() if driver.find_elements(By.ID, 'DismyName') else ''
+        등록일_text_detail = driver.find_element(By.ID, 'DiscDate').text.strip() if driver.find_elements(By.ID, 'DiscDate') else ''
+
+        # 첨부파일 정보
+        파일형식, 파일용량 = extract_attachment_info(driver)
+
+        # iframe 전환
+        법인명, 개인정보_수, 고유식별정보_수, 수신자 = '', 0, 0, ''
+        try:
+            iframe = WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.ID, 'ifa_form'))
+            )
+            driver.switch_to.frame(iframe)
+            logging.info(f"게시글 {index}: iframe으로 전환")
+
+            recipient_text = find_section_text(driver, ['수신자 (부서, 이름)', "Recipient's Department and Name"])
+            if recipient_text:
+                수신자 = recipient_text.strip()
+                법인명 = extract_corporate_name(recipient_text)
+                logging.info(f"게시글 {index}: 수신자 정보 추출 완료: {법인명}")
+            else:
+                logging.warning(f"게시글 {index}: 수신자 정보를 찾을 수 없습니다.")
