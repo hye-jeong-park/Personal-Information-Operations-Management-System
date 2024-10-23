@@ -220,3 +220,46 @@ def fetch_posts(driver: webdriver.Chrome) -> List[webdriver.remote.webelement.We
         logging.error(e)
         traceback.print_exc()
         return []
+
+
+def go_to_page(driver: webdriver.Chrome, page_number: int) -> bool:
+    """
+    주어진 페이지 번호로 이동합니다.
+    """
+    try:
+        # 페이지 네비게이션 영역이 로드될 때까지 대기
+        WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.ID, 'pagingNav'))
+        )
+
+        # 현재 페이지 번호와 이동하려는 페이지 번호가 같은지 확인
+        current_page_element = driver.find_element(By.CSS_SELECTOR, 'div#pagingNav strong.cur_num')
+        current_page = int(current_page_element.text.strip())
+        if current_page == page_number:
+            return True
+
+        # 페이지 번호 링크를 찾음
+        page_links = driver.find_elements(By.XPATH, f'//div[@id="pagingNav"]//a[@class="num_box"]')
+        page_link = None
+        for link in page_links:
+            if link.text.strip() == str(page_number):
+                page_link = link
+                break
+
+        if page_link:
+            page_link.click()
+        else:
+            logging.info(f"페이지 번호 {page_number}를 찾을 수 없습니다.")
+            return False
+
+        # 페이지 로딩 대기
+        time.sleep(2)
+        WebDriverWait(driver, 10).until(
+            EC.text_to_be_present_in_element((By.CSS_SELECTOR, 'div#pagingNav strong.cur_num'), str(page_number))
+        )
+        logging.info(f"{page_number} 페이지로 이동 완료")
+        return True
+    except Exception as e:
+        logging.error(f"{page_number} 페이지로 이동 중 오류 발생: {e}")
+        traceback.print_exc()
+        return False
