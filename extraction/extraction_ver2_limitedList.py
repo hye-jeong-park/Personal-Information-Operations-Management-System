@@ -61,10 +61,10 @@ try:
         driver.quit()
         sys.exit()
 
-    # 검색창에 '추출' 입력
+    # 검색창에 '개인정보 추출 신청서' 입력
     search_input = driver.find_element(By.ID, 'searchtext')
     search_input.clear()
-    search_input.send_keys('추출')
+    search_input.send_keys('개인정보 추출 신청서')
 
     # 검색 버튼 클릭
     try:
