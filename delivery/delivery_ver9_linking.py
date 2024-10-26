@@ -354,3 +354,25 @@ def extract_post_data(driver: webdriver.Chrome, post: webdriver.remote.webelemen
                 logging.info(f"게시글 {index}: 개인정보 수 추출 완료: {개인정보_수}")
             else:
                 logging.warning(f"게시글 {index}: '추출된 항목 및 건수' 섹션을 찾을 수 없습니다.")
+
+            # 개인정보 추출 신청서 링크 추출
+            tr_elements = driver.find_elements(By.XPATH, '//table//tr')
+            for tr in tr_elements:
+                tds = tr.find_elements(By.TAG_NAME, 'td')
+                if len(tds) >= 2:
+                    header_text = ''.join([span.text.strip() for span in tds[0].find_elements(By.TAG_NAME, 'span')])
+                    if '개인정보 추출 신청서 링크' in header_text or 'URL of the Application Form' in header_text:
+                        try:
+                            link_element = tds[1].find_element(By.TAG_NAME, 'a')
+                            application_form_link = link_element.get_attribute('href')
+                            logging.info(f"게시글 {index}: 개인정보 추출 신청서 링크 추출 완료: {application_form_link}")
+                        except Exception as e:
+                            logging.error(f"게시글 {index}: 개인정보 추출 신청서 링크 추출 중 오류 발생: {e}")
+                            application_form_link = ''
+                        break
+
+            driver.switch_to.default_content()
+        except Exception as e:
+            logging.error(f"게시글 {index}: iframe에서 데이터 추출 중 오류 발생: {e}")
+            traceback.print_exc()
+            driver.switch_to.default_content()
