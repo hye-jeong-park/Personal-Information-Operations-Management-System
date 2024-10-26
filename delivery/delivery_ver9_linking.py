@@ -376,3 +376,140 @@ def extract_post_data(driver: webdriver.Chrome, post: webdriver.remote.webelemen
             logging.error(f"게시글 {index}: iframe에서 데이터 추출 중 오류 발생: {e}")
             traceback.print_exc()
             driver.switch_to.default_content()
+
+        # 진행 구분 설정
+        진행_구분 = ''
+        try:
+            # 첨부파일 이력조회 버튼 클릭
+            attm_log_button = driver.find_element(By.XPATH, '//a[span[text()="첨부파일 이력조회"]]')
+            attm_log_button.click()
+            logging.info(f"게시글 {index}: 첨부파일 이력조회 버튼 클릭")
+
+            try:
+                # 이력 테이블이 나타날 때까지 대기
+                WebDriverWait(driver, 20).until(
+                    EC.presence_of_element_located((By.XPATH, '//table[@id="ResultTable"]/tbody/tr'))
+                )
+                logging.info(f"게시글 {index}: 첨부파일 이력 테이블 로딩 완료")
+            except Exception as e:
+                logging.error(f"게시글 {index}: 첨부파일 이력 테이블 로딩 중 오류 발생: {e}")
+                traceback.print_exc()
+                return None
+
+            # 이력 테이블에서 행들을 가져옴
+            rows = driver.find_elements(By.XPATH, '//table[@id="ResultTable"]/tbody/tr')
+            다운로드_이력_존재 = False
+
+            for row in rows:
+                cells = row.find_elements(By.TAG_NAME, 'td')
+                if len(cells) >= 6:
+                    구분 = cells[0].text.strip()
+                    수행자_element = cells[1]
+                    # 수행자 이름 추출
+                    수행자 = 수행자_element.find_element(By.CLASS_NAME, 'pob').text.strip()
+                    if 구분 == '다운로드' and 수행자 in 수신자:
+                        다운로드_이력_존재 = True
+                        logging.info(f"게시글 {index}: 다운로드 이력 발견 - 수행자: {수행자}")
+                        break
+
+            if 다운로드_이력_존재:
+                진행_구분 = '다운 완료'
+            else:
+                진행_구분 = ''
+        except Exception as e:
+            logging.error(f"게시글 {index}: 첨부파일 이력조회 처리 중 오류 발생: {e}")
+            traceback.print_exc()
+
+        # 데이터 구성
+        data = {
+            '등록일': 등록일_text or 등록일_text_detail,
+            '법인명': 법인명,
+            '제목': 제목,
+            '작성자': 작성자_full,
+            '링크': driver.current_url,
+            '파일형식': 파일형식,
+            '파일 용량': 파일용량,
+            '고유식별정보(수)': 고유식별정보_수,
+            '개인정보(수)': 개인정보_수,
+            '진행 구분': 진행_구분,
+            'application_form_link': application_form_link
+        }
+
+        logging.info(f"게시글 {index}: 데이터 추출 완료")
+        return data
+
+    except Exception as e:
+        logging.error(f"게시글 {index}: 데이터 추출 중 오류 발생: {e}")
+        traceback.print_exc()
+        return None
+    finally:
+        # 창 닫기 및 원래 창으로 전환
+        try:
+            driver.close()
+            driver.switch_to.window(driver.window_handles[0])
+        except Exception as e:
+            logging.error(f"게시글 {index}: 창 닫기 및 전환 중 오류 발생: {e}")
+            traceback.print_exc()
+        time.sleep(2)
+
+
+def save_to_excel(data_list: List[Dict]) -> None:
+    """
+    데이터프레임을 엑셀에 저장
+    """
+    if not data_list:
+        logging.info("추출된 데이터가 없습니다.")
+        return
+
+    try:
+        wb = load_workbook(EXCEL_FILE)
+        if WORKSHEET_NAME not in wb.sheetnames:
+            logging.error(f"워크시트 '{WORKSHEET_NAME}'이(가) 존재하지 않습니다.")
+            sys.exit()
+
+        ws = wb[WORKSHEET_NAME]
+        max_row = ws.max_row
+
+        column_mapping = {
+            '등록일': 19,           # S
+            '법인명': 20,           # T
+            '제목': 21,             # U
+            '작성자': 22,           # V
+            '링크': 23,             # W
+            '파일형식': 24,         # X
+            '파일 용량': 25,        # Y
+            '고유식별정보(수)': 26, # Z
+            '개인정보(수)': 27,     # AA
+            '진행 구분': 28         # AB
+        }
+
+        for data in data_list:
+            application_form_link = data.get('application_form_link', '')
+            if not application_form_link:
+                logging.warning("개인정보 추출 신청서 링크가 없습니다. 데이터를 저장하지 않습니다.")
+                continue
+
+            found_row = None
+            for row_idx in range(6, max_row + 1):
+                cell_value = ws.cell(row=row_idx, column=16).value  # Column P (16)
+                if cell_value:
+                    cell_value_str = str(cell_value).strip().replace('&amp;', '&')
+                    application_form_link_str = application_form_link.strip().replace('&amp;', '&')
+                    if cell_value_str == application_form_link_str:
+                        found_row = row_idx
+                        break
+
+            if found_row:
+                for col_name, col_idx in column_mapping.items():
+                    ws.cell(row=found_row, column=col_idx, value=data[col_name])
+                logging.info(f"데이터가 엑셀의 행 {found_row}에 저장되었습니다.")
+            else:
+                logging.warning(f"링크 '{application_form_link}'를 가진 행을 찾을 수 없습니다.")
+
+        wb.save(EXCEL_FILE)
+        logging.info(f"데이터가 성공적으로 '{EXCEL_FILE}' 파일에 저장되었습니다.")
+
+    except Exception as e:
+        logging.error("엑셀 파일 처리 중 오류가 발생했습니다.")
+        logging.error(e)
+        traceback.print_exc()
